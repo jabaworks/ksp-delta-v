@@ -1168,6 +1168,20 @@ export const MOON_PARENT_PLANET: Record<string, string> = {
  *   Neidon  4.09e11 m / 9.1744e13 / 2500 km  LO r=2700 km  v_c=5829 m/s
  *   Plock   5.35e11 m / 1.7848e11 /  189 km  LO r= 289 km  v_c= 786 m/s
  */
+/**
+ * Reference-orbit delta-v values shown on the orbital map (DeltaVMap.tsx).
+ * These are not Destinations, so they live here as plain constants.
+ * Keostationary (KEO): per the KSP wiki, altitude 2,863.33 km, speed 1,009.81 m/s.
+ * From 80 km LKO, the two-burn Hohmann insertion costs ~1,150 m/s.
+ * Heliostationary: not an official KSP term. Defined here as the circular orbit
+ * around Kerbol matching Kerbol's sidereal rotation (432,000 s), by analogy
+ * with KEO. Via Kepler's third law (mu_kerbol=1.1723328e18, T=432000s):
+ * a ~= 1,769,645 km (altitude ~= 1,508,045 km, matching the fan-wiki figure).
+ * Delta-v from LKO is a Hohmann transfer inward to that radius (vis-viva +
+ * Oberth): ~3,527 m/s ejection + ~8,502 m/s circularize = ~12,030 m/s total.
+ */
+export const KEOSTATIONARY_DV_FROM_LKO = 1150;
+export const HELIOSTATIONARY_DV_FROM_LKO = 12030;
 export const INTER_SYSTEM_DV: Record<string, number> = {
   // ── Stock cross-system pairs ──────────────────────────────────────────────
   "duna|eve":        1330,  // Eve ejection 470 + Duna capture 860
