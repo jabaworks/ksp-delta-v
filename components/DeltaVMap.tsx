@@ -302,7 +302,12 @@ export default function DeltaVMap({ selected, onSelect, scaleMode, rescale }: Pr
   const [hovered, setHovered] = useState<string | null>(null);
   const [bloomed, setBloomed] = useState<Set<string>>(new Set());
   const svgRef = useRef<SVGSVGElement>(null);
-  const dragRef = useRef<{ clientX: number; clientY: number; view: { x: number; y: number; span: number } } | null>(null);
+  const dragRef = useRef<{
+    clientX: number; clientY: number;
+    view: { x: number; y: number; span: number };
+    pointerId: number;
+    captured: boolean;
+  } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const opmEnabled = scaleMode === "opm";
@@ -415,21 +420,37 @@ export default function DeltaVMap({ selected, onSelect, scaleMode, rescale }: Pr
     };
   }
 
+  // setPointerCapture immediately on every pointerdown would also swallow
+  // plain clicks on a node (the browser routes the click to whatever holds
+  // capture, not the element under the cursor) -- so capture is deferred
+  // until the pointer has actually moved a few pixels, distinguishing a
+  // click from the start of a drag.
   function handlePointerDown(e: React.PointerEvent<SVGSVGElement>) {
-    dragRef.current = { clientX: e.clientX, clientY: e.clientY, view };
-    (e.currentTarget as Element).setPointerCapture(e.pointerId);
-    setIsDragging(true);
+    dragRef.current = { clientX: e.clientX, clientY: e.clientY, view, pointerId: e.pointerId, captured: false };
   }
 
   function handlePointerMove(e: React.PointerEvent<SVGSVGElement>) {
     if (!dragRef.current) return;
+    const dxPx = e.clientX - dragRef.current.clientX;
+    const dyPx = e.clientY - dragRef.current.clientY;
+
+    if (!dragRef.current.captured) {
+      if (Math.hypot(dxPx, dyPx) < 4) return; // still within click tolerance
+      (e.currentTarget as Element).setPointerCapture(dragRef.current.pointerId);
+      dragRef.current.captured = true;
+      setIsDragging(true);
+    }
+
     const rect = svgRef.current!.getBoundingClientRect();
-    const dx = ((e.clientX - dragRef.current.clientX) / rect.width) * dragRef.current.view.span;
-    const dy = ((e.clientY - dragRef.current.clientY) / rect.height) * dragRef.current.view.span;
+    const dx = (dxPx / rect.width) * dragRef.current.view.span;
+    const dy = (dyPx / rect.height) * dragRef.current.view.span;
     setView({ x: dragRef.current.view.x - dx, y: dragRef.current.view.y - dy, span: dragRef.current.view.span });
   }
 
-  function handlePointerUp() {
+  function handlePointerUp(e: React.PointerEvent<SVGSVGElement>) {
+    if (dragRef.current?.captured) {
+      try { (e.currentTarget as Element).releasePointerCapture(dragRef.current.pointerId); } catch { /* already released */ }
+    }
     dragRef.current = null;
     setIsDragging(false);
   }
